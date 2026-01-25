@@ -4,6 +4,7 @@ import turtle
 
 class TurtlePrint:
     def __init__(self,image,faster):
+        self.first_pos = turtle.pos()
         self.img_path = image
         self.faster = faster
 
@@ -11,15 +12,10 @@ class TurtlePrint:
         # Image loading
         img_data = Image.open(self.img_path).convert("RGBA").transpose(Image.ROTATE_90)
         self.width, self.height = img_data.size
-
-        # Create a list to hold the RGB data for the pixels
-        self.image_array = np.empty((self.height, self.width, 4), dtype = np.uint8)
-        self.image_array[..., 3] = 255 
-
+        
         # Analyze the image pixel by pixel and store the RGB values ​​of each pixel in a list
-        for y in range(self.height):
-            for x in range(self.width):
-                self.image_array[y][x] = img_data.getpixel((x, y))
+        self.image_array = np.array(img_data, dtype=np.uint8)
+        self.image_array[..., 3] = 255 
 
     # Move the turtle to the output start point
     def turtle_prepare(self):
@@ -60,9 +56,9 @@ class TurtlePrint:
                 AX = X + total_combo
                 if AX < self.height:
                     # ink settings
-                    RED = self.image_array[AX,Y ,0]/255.0 
-                    GREEN = self.image_array[AX,Y ,1]/255.0
-                    BLUE = self.image_array[AX,Y ,2]/255.0
+                    RED = self.image_array[AX ,Y ,0]/255.0 
+                    GREEN = self.image_array[AX ,Y ,1]/255.0
+                    BLUE = self.image_array[AX ,Y ,2]/255.0
                     turtle.pencolor(RED,GREEN,BLUE)
 
                     forward_distance = 1
@@ -79,9 +75,14 @@ class TurtlePrint:
             self.turtle_move_nextline()
         turtle.tracer(True) if self.faster == True else None
 
-# turtle.setup(width=800, height=600)
-turtle.penup()
+        turtle.penup()
+        turtle.right(180)
+        turtle.goto(self.first_pos)
+        turtle.forward(self.width//2)
+        turtle.pendown()
 
-TurtlePrint("img_file/0x7bcat.png",faster=True).run()
+# turtle.setup(width=800, height=600)
+
+TurtlePrint("img_file/0x7bcat.png",faster = True).run()
 
 input("end")
