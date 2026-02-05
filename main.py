@@ -1,88 +1,86 @@
-from PIL import Image
+from PIL import Image, ImageOps
 import numpy as np
 import turtle
+import math
 
-class TurtlePrint:
-    def __init__(self,image,faster):
+class TurtlePrint():
+    def __init__(self, image, resize=None, faster=False):
         self.first_pos = turtle.pos()
         self.img_path = image
         self.faster = faster
-
-    def img_prosessing(self):
-        # Image loading
-        img_data = Image.open(self.img_path).convert("RGBA").transpose(Image.ROTATE_90)
-        self.width, self.height = img_data.size
         
-        # Analyze the image pixel by pixel and store the RGB values ​​of each pixel in a list
-        self.image_array = np.array(img_data, dtype=np.uint8)
-        self.image_array[..., 3] = 255 
+        self.img_data = Image.open(self.img_path).convert("RGB")
+        self.img_data = ImageOps.exif_transpose(self.img_data)
+        if resize != None:
+            self.img_data = self.img_data.resize(resize)
+        self.width, self.height = self.img_data.size
+        turtle.colormode(cmode=255)
 
     # Move the turtle to the output start point
     def turtle_prepare(self):
-        turtle.shape("turtle")
         turtle.penup()
-        turtle.left(45)
+        theta_rad = math.atan(self.height / self.width)
+        theta_deg = math.degrees(theta_rad)
+        turtle.left(180-theta_deg)
         # The coordinates when the function is called will be the center of the image.
-        turtle.forward(((self.width / 2) ** 2 + (self.height / 2) ** 2) ** (1 / 2)) 
-        turtle.left(45)
+        turtle.forward(((self.width/2)**2 + (self.height/2)**2)**(1/2))
+        turtle.left(theta_deg)
         turtle.forward(1)
-        turtle.left(90)
+        turtle.left(180)
         turtle.pendown()
 
         turtle.speed('fastest')
 
     # Move the turtle to the next line
-    def turtle_move_nextline(self):
-            turtle.penup()
-            turtle.left(90)
-            turtle.forward(1)
-            turtle.tracer(True) if self.faster == True else None
-            turtle.left(90)
-            turtle.tracer(False) if self.faster == True else None
-            turtle.forward(self.height)
-            turtle.left(180)
-            turtle.tracer(True) if self.faster == True else None
-
-    def run(self):
-        self.img_prosessing()
-        self.turtle_prepare()
-        
-        # Based on the loaded image data RGB array, we draw the image using a double for loop
-        for Y in range(self.width):
-            turtle.tracer(False) if self.faster == True else None
-            turtle.pendown()
-            total_combo = 0
-            for X in range(self.height):
-                AX = X + total_combo
-                if AX < self.height:
-                    # ink settings
-                    RED = self.image_array[AX ,Y ,0]/255.0 
-                    GREEN = self.image_array[AX ,Y ,1]/255.0
-                    BLUE = self.image_array[AX ,Y ,2]/255.0
-                    turtle.pencolor(RED,GREEN,BLUE)
-
-                    forward_distance = 1
-                    # Contiguous arrays with the same RGB values ​​will draw consecutive lines.
-                    while(AX + forward_distance < self.height):
-                        if np.any(self.image_array[AX,Y] != self.image_array[AX + forward_distance,Y]):
-                            break
-                        total_combo += 1
-                        forward_distance += 1
-                    turtle.forward(forward_distance) 
-                else:
-                    break
-
-            self.turtle_move_nextline()
-        turtle.tracer(True) if self.faster == True else None
-
+    def turtle_move_nextline(self, count):
         turtle.penup()
-        turtle.right(180)
+        turtle.left(-90 if count % 2 == 0 else 90)
+        turtle.forward(1)
+        turtle.left(-90 if count % 2 == 0 else 90)
+        turtle.forward(1)
+    
+    def turtle_return(self):
+        turtle.tracer(True) if self.faster == True else None
+        turtle.penup()
         turtle.goto(self.first_pos)
         turtle.forward(self.width//2)
         turtle.pendown()
 
-# turtle.setup(width=800, height=600)
 
-TurtlePrint("img_file/0x7bcat.png",faster = True).run()
+    def run(self):
+        self.turtle_prepare()
+        # Based on the loaded image data RGB array, we draw the image using a double for loop
+        for y in range(self.height):
+            turtle.tracer(False) if self.faster == True else None
+            turtle.pendown()
+            total_combo = 0
+            for x in range(self.width):
+                adjust_x = x + total_combo
+                direction = 1
+                if y % 2 == 1:
+                    adjust_x = (self.width-1) - x - total_combo
+                    direction = -1
+                if  0 <= adjust_x and adjust_x < self.width:
+                    # ink settings
+                    turtle.pencolor(self.img_data.getpixel((adjust_x, y)))
+                    forward_distance = 1
+                    adjust = adjust_x + (forward_distance * direction)
+                    # Contiguous arrays with the same RGB values ​​will draw consecutive lines.
+                    while(0 <= adjust and adjust < self.width):
+                        if np.any(self.img_data.getpixel((adjust_x, y)) != self.img_data.getpixel((adjust, y))):
+                            break
+                        forward_distance += 1
+                        adjust += direction
+                    total_combo += forward_distance - 1
+                    turtle.forward(forward_distance) 
+                else:
+                    print(adjust_x)
+                    break
+            self.turtle_move_nextline(y)
+        
+        self.turtle_return()
+
+# turtle.shape("turtle")
+TurtlePrint("img_file/INNU.png",resize = (64,64), faster = True).run()
 
 input("end")
